@@ -100,6 +100,6 @@ document.addEventListener('submit',e=>{
  else{const newId='custom-'+crypto.randomUUID();const event={id:newId,title:v.title,area:v.area,date:v.date,start:v.start,end:v.end};state.custom=state.custom||[];state.custom.push(event);state.sessions[newId]={status:v.status,actual:v.actual,note:v.note,next:v.next};}
  selected=v.date;weekDate=v.date;save();$('#sessionDialog').close();render();toast(id?'Event updated':'Event added');
 });
-$('#importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>5e6)throw Error();const imported=JSON.parse(await f.text());if(!validState(imported))throw Error();if(!confirm('Replace this device’s progress with this backup? Export your current data first if needed.'))return;state=imported;save();render();toast('Backup imported.');}catch{toast('That file is not a valid semester backup.');}finally{e.target.value='';}});
+$('#importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>50e6)throw Error();const imported=JSON.parse(await f.text());if(!validState(imported))throw Error();if(!confirm('Replace this device’s progress with this backup? Export your current data first if needed.'))return;state=imported;save();render();toast('Backup imported.');}catch{toast('That file is not a valid semester backup.');}finally{e.target.value='';}});
 addEventListener('hashchange',()=>{render();window.scrollTo(0,0);});
 render();
