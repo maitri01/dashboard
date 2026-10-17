@@ -3,7 +3,7 @@ const handlers={},elements=new Map(),memory=new Map();
 const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},scrollIntoView(){},showModal(){},close(){}});return elements.get(s);};
 const context={console,Intl,Date,Set,Array,Number,String,Object,JSON,Math,URL,Blob,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,location:{hash:'#today'},localStorage:{getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v)},FormData:class{constructor(form){return Object.entries(form.values)}},document:{querySelector:element,querySelectorAll:()=>[],addEventListener:(event,handler)=>handlers[event]=handler},window:{scrollTo(){}},addEventListener(){}};
 vm.createContext(context);
-vm.runInContext(fs.readFileSync('docs/data.js','utf8')+'\n'+fs.readFileSync('docs/notebook.js','utf8')+'\n'+fs.readFileSync('docs/app.js','utf8'),context);
+vm.runInContext(fs.readFileSync('docs/data.js','utf8')+'\n'+fs.readFileSync('docs/notebook.js','utf8')+'\n'+fs.readFileSync('docs/richtext.js','utf8')+'\n'+fs.readFileSync('docs/app.js','utf8'),context);
 context.submit=values=>handlers.submit({target:{id:'eventForm',dataset:{id:values.id||''},values},preventDefault(){}});
 vm.runInContext(`
 function assert(value,message){if(!value)throw Error(message);}
