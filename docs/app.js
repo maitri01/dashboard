@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=
 const KEY='little-structure-v1';
 let state={version:1,sessions:{},lessons:{},reflections:{},custom:[]};
 let lastRemoved=null;
-let selectedNote=null,showArchivedNotes=false;
+let selectedNote=null,showArchivedNotes=false,showDeletedNotes=false,lastDeletedNote=null;
 let storageOK=true;
 try{const raw=localStorage.getItem(KEY);if(raw){const parsed=JSON.parse(raw);if(validState(parsed))state=parsed;else storageOK=false;}}catch{storageOK=false;}
 function validEvent(v){return v&&typeof v==='object'&&typeof v.id==='string'&&/^custom-[a-zA-Z0-9-]+$/.test(v.id)&&typeof v.title==='string'&&v.title.trim().length>0&&v.title.length<=160&&['german','ai','vgm','work','research','personal'].includes(v.area)&&/^\d{4}-\d{2}-\d{2}$/.test(v.date)&&v.date>=START&&v.date<=END&&['start','end'].every(k=>typeof v[k]==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v[k]))&&v.start<v.end;}
@@ -90,8 +90,11 @@ document.addEventListener('click',async e=>{
  if(action==='addNoteBlock'){addNoteBlock(b.dataset.kind||'paragraph');}
  if(action==='noteImage')$('#noteImageFile').click();
  if(action==='archiveNote'){const n=currentNote();if(n){n.archived=true;selectedNote=null;persistNotebook();render();}}
- if(action==='restoreNote'){const n=currentNote();if(n){n.archived=false;persistNotebook();render();}}
- if(action==='toggleArchived'){showArchivedNotes=!showArchivedNotes;selectedNote=null;render();}
+ if(action==='restoreNote'){const n=currentNote();if(n){n.archived=false;n.deleted=false;if(lastDeletedNote===n.id)lastDeletedNote=null;selectedNote=n.id;showArchivedNotes=false;showDeletedNotes=false;persistNotebook();render();}}
+ if(action==='toggleArchived'){showArchivedNotes=!showArchivedNotes;showDeletedNotes=false;selectedNote=null;render();}
+ if(action==='toggleTrash'){showDeletedNotes=!showDeletedNotes;showArchivedNotes=false;selectedNote=null;render();}
+ if(action==='deleteNote'){const n=currentNote();if(n){n.deleted=true;lastDeletedNote=n.id;selectedNote=null;save();render();toast('Note deleted');}}
+ if(action==='undoDeleteNote'){const n=(state.notebook||[]).find(n=>n.id===lastDeletedNote);if(n){n.deleted=false;n.archived=false;selectedNote=n.id;showArchivedNotes=false;showDeletedNotes=false;lastDeletedNote=null;save();render();}}
 });
 document.addEventListener('change',e=>{if(e.target.dataset.todo){const n=currentNote(),block=n?.blocks.find(x=>x.id===e.target.dataset.todo);if(block){block.checked=e.target.checked;e.target.closest('.note-block').querySelector('.block-text').classList.toggle('todo-done',block.checked);persistNotebook();}}if(e.target.id==='dayPicker'){if(e.target.value>=START&&e.target.value<=END)selected=e.target.value;render();}if(e.target.id==='protectedToggle'){showProtected=e.target.checked;render();}if(e.target.id==='noteDate'){selected=e.target.value;render();}if(e.target.dataset.task!==undefined){const p=state.lessons[chosenLesson]||{},checks=[...(p.checks||[])];checks[Number(e.target.dataset.task)]=e.target.checked;state.lessons[chosenLesson]={...p,checks,done:false};save();}});
 document.addEventListener('input',e=>{if(e.target.id==='notebookTitle'){const n=currentNote();if(n){n.title=e.target.value;persistNotebook();}}if(e.target.dataset.blockText){const n=currentNote(),block=n?.blocks.find(x=>x.id===e.target.dataset.blockText);if(block){if(e.target.isContentEditable){saveRichEditor(e.target);}else{block.text=e.target.value;persistNotebook();}}}if(e.target.id==='quickNote'){state.reflections[selected]=e.target.value;save();}if(e.target.id==='lessonNote'){state.lessons[chosenLesson]={...state.lessons[chosenLesson],note:e.target.value};save();}});

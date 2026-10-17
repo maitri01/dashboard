@@ -5,6 +5,7 @@ const context={console,Intl,Date,Set,Array,Number,String,Object,JSON,Math,URL,Bl
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('docs/data.js','utf8')+'\n'+fs.readFileSync('docs/notebook.js','utf8')+'\n'+fs.readFileSync('docs/richtext.js','utf8')+'\n'+fs.readFileSync('docs/app.js','utf8'),context);
 context.submit=values=>handlers.submit({target:{id:'eventForm',dataset:{id:values.id||''},values},preventDefault(){}});
+context.click=action=>handlers.click({target:{closest:()=>({dataset:{action}})}});
 vm.runInContext(`
 function assert(value,message){if(!value)throw Error(message);}
 assert(ALL.length===328,'Base schedule changed');
@@ -43,6 +44,16 @@ assert(notebookView().includes('checked'),'To-do completion not rendered');
 assert(validState(JSON.parse(JSON.stringify(state))),'Notebook backup roundtrip invalid');
 assert(!validNotebook([{id:'note-1',title:'Bad',blocks:[{id:'block-1',type:'image',text:'',src:'javascript:alert(1)'}]}]),'Unsafe image accepted');
 assert(!validNotebook([{id:'note-1',title:'Bad',blocks:[{id:'block-1',type:'html',text:'bad'}]}]),'Unknown note block accepted');
+const noteId=currentNote().id;
+click('archiveNote');click('toggleArchived');assert(currentNote()?.id===noteId,'Archived note missing');
+assert(notebookView().includes('contenteditable="true"'),'Archived note is locked');
+click('restoreNote');assert(currentNote()?.id===noteId&&!showArchivedNotes,'Archive restore failed');
+click('deleteNote');assert(!currentNote(),'Deleted note remains active');
+click('undoDeleteNote');assert(currentNote()?.id===noteId,'Undo note deletion failed');
+click('deleteNote');click('toggleTrash');assert(currentNote()?.id===noteId,'Trash missing deleted note');
+assert(notebookView().includes('Restore note'),'Trash has no restore control');
+click('restoreNote');assert(currentNote()?.id===noteId&&!showDeletedNotes,'Trash restore failed');
+assert(validState(JSON.parse(JSON.stringify(state))),'Trash backup invalid');
 location.hash='#today';render();assert(navigateTo('#notebook'),'Notes route rejected');
 assert(location.hash==='#notebook'&&document.querySelector('#app').innerHTML.includes('notebook-editor'),'Menu did not render Notes immediately');
 document.querySelector('#app').innerHTML='stale screen';navigateTo('#notebook');assert(document.querySelector('#app').innerHTML.includes('notebook-editor'),'Clicking current menu item did not recover its view');
