@@ -57,8 +57,16 @@ function openSession(id){
  $('#dialogContent').innerHTML=`<div class="dialog-top"><h2 id="dialogTitle">${id?'Edit event':'Add event'}</h2><button class="icon-btn" data-action="close" aria-label="Close">×</button></div><form id="eventForm" data-id="${id||''}"><label class="field"><span>Event name</span><input name="title" maxlength="160" value="${esc(b.title)}" required style="width:100%"></label><label class="field"><span>Category</span><select name="area">${Object.entries(AREAS).map(([key,label])=>'<option value="'+key+'" '+(b.area===key?'selected':'')+'>'+label+'</option>').join('')}</select></label><div class="event-times"><label class="field"><span>Date</span><input name="date" type="date" min="${START}" max="${END}" value="${b.date}" required></label><label class="field"><span>Start</span><input name="start" type="time" value="${b.start}" required></label><label class="field"><span>End</span><input name="end" type="time" value="${b.end}" required></label></div><label class="field"><span>Status</span><select name="status">${['Planned','In progress','Done','Partial','Skipped'].map(x=>'<option '+((b.status||'Planned')===x?'selected':'')+'>'+x+'</option>').join('')}</select></label><label class="field"><span>Actual minutes</span><input name="actual" type="number" min="0" max="1440" value="${esc(saved.actual??'')}"></label><label class="field"><span>My notes</span><textarea name="note">${esc(saved.note||'')}</textarea></label><label class="field"><span>Next step</span><input name="next" value="${esc(saved.next||'')}" style="width:100%"></label><label class="toggle field"><input type="checkbox" name="allowOverlap"> Allow overlap</label><div class="actions"><button class="btn primary" type="submit">Save event</button><button class="btn" type="button" data-action="close">Cancel</button>${id?'<button class="btn danger" type="button" data-remove="'+id+'">Remove event</button>':''}</div><p id="formError" role="alert" style="color:#a13c35;margin-top:12px"></p></form>`;
  $('#sessionDialog').showModal();
 }
+function navigateTo(hash){
+ const route=hash.slice(1);
+ if(!['today','week','german','notes','notebook','settings'].includes(route))return false;
+ if($('#sessionDialog').open)$('#sessionDialog').close();
+ if(location.hash!==hash)location.hash=hash;
+ render();window.scrollTo(0,0);return true;
+}
 document.addEventListener('click',async e=>{
  const b=e.target.closest('button,a');if(!b)return;
+ if(b.tagName==='A'&&b.getAttribute('href')?.startsWith('#')){e.preventDefault();navigateTo(b.getAttribute('href'));return;}
  if(b.dataset.note){selectedNote=b.dataset.note;render();return;}
  if(b.dataset.removeBlock){const n=currentNote();if(n){n.blocks=n.blocks.filter(x=>x.id!==b.dataset.removeBlock);persistNotebook();render();}return;}
  if(b.dataset.session){openSession(b.dataset.session);return;}
