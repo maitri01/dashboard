@@ -2,6 +2,12 @@
 
 A responsive, buildless semester dashboard with Today, Week, German studio, and Reflections views.
 
+## Manual events and notes
+
+Use **Add event** in Today or Week to create an event with a title, category, date and times. Open any event to rename, reschedule, or remove it. Undo the latest removal immediately or restore removed events from Data & settings. New events can explicitly allow overlap when needed.
+
+The **Notes** section supports separate notes containing paragraphs, bullets, numbered lists, to-do checkboxes, and pasted/uploaded images. Enter continues list items; Shift+Enter inserts a line break. Images are resized to fit browser storage. Notes can be archived and restored. All note content, custom events, removals and progress are included in backup export/import; older backups remain supported.
+
 ## Hosting
 
 In this repository, open **Settings → Pages → Build and deployment**. Select **Deploy from a branch**, branch **main**, folder **/docs**, and save. The site is served at `https://maitri01.github.io/dashboard/` after GitHub finishes deploying.

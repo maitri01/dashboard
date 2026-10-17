@@ -1,0 +1,48 @@
+const fs=require('node:fs'),vm=require('node:vm');
+const handlers={},elements=new Map(),memory=new Map();
+const element=s=>{if(!elements.has(s))elements.set(s,{innerHTML:'',textContent:'',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},scrollIntoView(){},showModal(){},close(){}});return elements.get(s);};
+const context={console,Intl,Date,Set,Array,Number,String,Object,JSON,Math,URL,Blob,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,location:{hash:'#today'},localStorage:{getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v)},FormData:class{constructor(form){return Object.entries(form.values)}},document:{querySelector:element,querySelectorAll:()=>[],addEventListener:(event,handler)=>handlers[event]=handler},window:{scrollTo(){}},addEventListener(){}};
+vm.createContext(context);
+vm.runInContext(fs.readFileSync('docs/data.js','utf8')+'\n'+fs.readFileSync('docs/notebook.js','utf8')+'\n'+fs.readFileSync('docs/app.js','utf8'),context);
+context.submit=values=>handlers.submit({target:{id:'eventForm',dataset:{id:values.id||''},values},preventDefault(){}});
+vm.runInContext(`
+function assert(value,message){if(!value)throw Error(message);}
+assert(ALL.length===328,'Base schedule changed');
+assert(validState({version:1,sessions:{},lessons:{},reflections:{}}),'Old backups must load');
+for(let d=START;d<=END;d=addDays(d,1)){const rows=sessions(d);for(let i=1;i<rows.length;i++)assert(rows[i-1].end<=rows[i].start,'Base overlap');}
+const totals={};ALL.filter(b=>b.date<'2026-10-26').forEach(b=>totals[b.area]=(totals[b.area]||0)+minutes(b.end)-minutes(b.start));
+assert(totals.ai===360&&totals.german===300&&totals.research===300&&totals.work===1380&&totals.vgm===570,'Weekly totals changed');
+submit({title:'Dentist',date:'2026-10-20',start:'16:00',end:'16:30',area:'personal',status:'Planned',note:'Bring card'});
+assert(state.custom.length===1,'Custom event not created');
+const id=state.custom[0].id;
+assert(sessions('2026-10-20').some(b=>b.id===id),'Custom event absent');
+assert(todayView().includes('Dentist'),'Custom personal event hidden');
+assert(validState(JSON.parse(memoryValue=JSON.stringify(state))),'Custom backup invalid');
+submit({title:'Collision',date:'2026-10-20',start:'16:10',end:'16:20',area:'personal',status:'Planned'});
+assert(state.custom.length===1,'Overlap was accepted without opt-in');
+submit({title:'Allowed overlap',date:'2026-10-20',start:'16:10',end:'16:20',area:'personal',status:'Planned',allowOverlap:'on'});
+assert(state.custom.length===2,'Explicit overlap rejected');
+submit({title:'Invalid time',date:'2026-10-20',start:'17:00',end:'16:00',area:'personal',status:'Planned'});
+assert(state.custom.length===2,'Invalid time accepted');
+submit({id,title:'Appointment',date:'2026-10-20',start:'16:00',end:'16:30',area:'personal',status:'Done',note:'Updated'});
+assert(sessions('2026-10-20').find(b=>b.id===id).title==='Appointment','Edit failed');
+removeEvent(id);assert(!sessions('2026-10-20').some(b=>b.id===id),'Remove failed');
+assert(settingsView().includes('Appointment'),'Removed event not restorable');
+restoreEvent(id);assert(sessions('2026-10-20').some(b=>b.id===id),'Restore failed');
+const baseId=ALL.find(b=>b.area==='ai').id;removeEvent(baseId);assert(!effectiveEvents().some(b=>b.id===baseId),'Base event removal failed');restoreEvent(baseId);
+const before=nextLesson().id;removeEvent(ALL.find(b=>b.area==='german').id);assert(nextLesson().id===before,'Removal changed lesson progress');
+assert(!weekView().includes('Travel blocks are estimates'),'Weekly disclaimer remains');
+assert(!germanView().includes('These are original practice instructions'),'German disclaimer remains');
+for(const tab of ['today','week','german','notes','notebook','settings']){location.hash='#'+tab;render();assert(document.querySelector('#app').innerHTML.length>0,'Empty view');}
+location.hash='#notebook';createNote();assert(state.notebook.length===1,'Note creation failed');
+addNoteBlock('bullet');addNoteBlock('number');addNoteBlock('todo');
+assert(currentNote().blocks.map(b=>b.type).join(',')==='paragraph,bullet,number,todo','Missing note block types');
+currentNote().title='<b>My note</b>';currentNote().blocks[0].text='<script>alert(1)</script>';currentNote().blocks[3].checked=true;persistNotebook();
+assert(notebookView().includes('&lt;script&gt;'),'Note content not escaped');
+assert(notebookView().includes('checked'),'To-do completion not rendered');
+assert(validState(JSON.parse(JSON.stringify(state))),'Notebook backup roundtrip invalid');
+assert(!validNotebook([{id:'note-1',title:'Bad',blocks:[{id:'block-1',type:'image',text:'',src:'javascript:alert(1)'}]}]),'Unsafe image accepted');
+assert(!validNotebook([{id:'note-1',title:'Bad',blocks:[{id:'block-1',type:'html',text:'bad'}]}]),'Unknown note block accepted');
+assert(!validState({version:1,sessions:{},lessons:{},reflections:{},custom:[{id:'bad'}]}),'Malformed backup accepted');
+console.log('PASS: legacy backups; create/edit/remove/restore; collision handling; notebook block types and to-dos; escaped note text; backup roundtrip; progress preservation; all views; removed explanatory notes.');
+`,context);
